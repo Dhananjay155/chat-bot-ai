@@ -1,45 +1,41 @@
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { COOKIE_NAME } from "./constants.js";
 
+const JWT_SECRET = process.env.JWT_SECRET || "defaultSecretKey";
 
-import { Request, Response, NextFunction } from 'express';
-import  jwt  from "jsonwebtoken";
-import  { COOKIE_NAME } from "./constants.js";
-import { promise } from "zod";
-import { rejects } from "assert";
-
-
-
-export const createToken = (id: string, email: string, expiresIn: string) => {
-    const payload = { id, email };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn,
-    });
-    return token;
+export const createToken = (
+  id: string,
+  email: string,
+  expiresIn: string = "7d"
+) => {
+  const payload = { id, email };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn });
 };
 
-
-
 export const verifyToken = async (
-    req:Request, 
-    res:Response, 
-    next: NextFunction) => {
-         let token = req.header("Authorization");
-        // const token = req.signedCookies[`${COOKIE_NAME}`];
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  let token = req.header("Authorization");
 
+  if (!token || token.trim() === "") {
+    return res.status(401).json({ message: "Token Not Received" });
+  }
 
-        if (!token || token.trim() === "") {
-            return res.status(401).json({ message: "Token Not Received" });
-          }
+  if (token.startsWith("Bearer ")) {
+    token = token.slice(7).trim();
+  }
 
-        return new Promise<void>((resolve, reject) => {
-            return jwt.verify(token, process.env.JWT_SECRET, (err, success) => {
-              if (err) {
-                reject(err.message);
-                return res.status(401).json({ message: "Token Expired" });
-              } else {
-                resolve();
-                res.locals.jwtData = success;
-                return next();
-              }
-            });
-          });
-        };
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    res.locals.jwtData = decoded;
+    next();
+  } catch (err: any) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token Expired" });
+    }
+    return res.status(403).json({ message: "Invalid Token" });
+  }
+};
