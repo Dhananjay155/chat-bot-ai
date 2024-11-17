@@ -1,9 +1,8 @@
 
-import Logo from './shared/Logo';
-//using the heder will be using component of MUI
+import Logo from '../components/shared/Logo';
 import {  AppBar, Toolbar } from "@mui/material";
 import { useAuth } from '../context/AuthContext';
-import NavigationLink from './shared/NavigationLink';
+import NavigationLink from '../components/shared/NavigationLink';
 
 
 const Header = () => {
